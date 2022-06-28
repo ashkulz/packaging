@@ -64,3 +64,74 @@ jobs:
           fail_on_unmatched_files: false
           draft: true
           body: All packages were built and uploaded automatically as a part of [this run](${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}), using this [wkhtmltopdf branch/tag](https://github.com/wkhtmltopdf/wkhtmltopdf/tree/${{ github.event.inputs.wkhtmltopdf_ref }}).
+
+  macos:
+    runs-on: macos-10.15
+    steps:
+      - name: checkout packaging
+        uses: actions/checkout@v2
+        with:
+          path: packaging
+      - name: checkout wkhtmltopdf with submodules
+        uses: actions/checkout@v2
+        with:
+          repository: wkhtmltopdf/wkhtmltopdf
+          path: wkhtmltopdf
+          submodules: true
+          ref: ${{ github.event.inputs.wkhtmltopdf_ref }}
+      - name: configure build environment
+        run:  |
+          brew install conan
+          pip3 install pyyaml
+          sudo gem install fpm --no-document
+          sudo xcode-select --switch /Library/Developer/CommandLineTools
+          sed -i -e 's/CFLAGS CXXFLAGS LDFLAGS/CFLAGS CXXFLAGS OBJECTIVE_CFLAGS LDFLAGS/g' wkhtmltopdf/qt/configure
+          sed -i -e 's/compiler.version=9.0/compiler.version=12.0/g' packaging/.conan/profiles/macos-cocoa
+      - name: build
+        run: cd packaging && MACOSX_DEPLOYMENT_TARGET=10.7 python3 ./build vagrant macos-cocoa --clean --version - - --iteration ${{ github.event.inputs.packaging_iteration }} ../wkhtmltopdf
+      - uses: softprops/action-gh-release@v0.1.14
+        with:
+          name: ${{ github.event.inputs.packaging_release }}
+          tag_name: ${{ github.event.inputs.packaging_release }}-${{ github.event.inputs.packaging_iteration }}
+          target_commitish: ${{ github.sha }}
+          files: "packaging/wkhtmltox*.pkg"
+          fail_on_unmatched_files: false
+          draft: true
+          body: All packages were built and uploaded automatically as a part of [this run](${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}), using this [wkhtmltopdf branch/tag](https://github.com/wkhtmltopdf/wkhtmltopdf/tree/${{ github.event.inputs.wkhtmltopdf_ref }}).
+
+  windows:
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        package_target:
+          - msvc2015-win64
+          - msvc2015-win32
+      fail-fast: false
+    steps:
+      - name: checkout packaging
+        uses: actions/checkout@v2
+        with:
+          path: packaging
+      - name: checkout wkhtmltopdf with submodules
+        uses: actions/checkout@v2
+        with:
+          repository: wkhtmltopdf/wkhtmltopdf
+          path: wkhtmltopdf
+          submodules: true
+          ref: ${{ github.event.inputs.wkhtmltopdf_ref }}
+      - name: configure build environment
+        run:  |
+          choco install -yr --no-progress vcbuildtools -ia "/Full"
+          pip install -q conan
+          cmd /c attrib "C:\Program Files (x86)\Windows Kits\10\include\wdf" +H
+      - name: build
+        run: cd packaging && python3 ./build vagrant ${{ matrix.package_target }} --clean --version - - --iteration ${{ github.event.inputs.packaging_iteration }} ../wkhtmltopdf
+      - uses: softprops/action-gh-release@v0.1.14
+        with:
+          name: ${{ github.event.inputs.packaging_release }}
+          tag_name: ${{ github.event.inputs.packaging_release }}-${{ github.event.inputs.packaging_iteration }}
+          target_commitish: ${{ github.sha }}
+          files: "packaging/wkhtmltox*.exe"
+          fail_on_unmatched_files: false
+          draft: true
+          body: All packages were built and uploaded automatically as a part of [this run](${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}), using this [wkhtmltopdf branch/tag](https://github.com/wkhtmltopdf/wkhtmltopdf/tree/${{ github.event.inputs.wkhtmltopdf_ref }}).
