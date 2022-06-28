@@ -14,57 +14,6 @@ on:
         required: true
 
 jobs:
-  docker:
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        package_target:
-          - almalinux8-aarch64
-          - almalinux8-ppc64le
-          - almalinux8-x86_64
-          - almalinux9-aarch64
-          - almalinux9-ppc64le
-          - almalinux9-x86_64
-          - bionic-ppc64el
-          - buster-ppc64el
-          - bullseye-amd64
-          - bullseye-arm64
-          - bullseye-i386
-          - bullseye-ppc64el
-          - focal-ppc64el
-          - jammy-amd64
-          - jammy-arm64
-          - jammy-ppc64el
-          - raspberrypi.bullseye-armhf
-      fail-fast: false
-    steps:
-      - name: configure docker
-        run:  |
-          echo '{ "experimental": true }' | sudo tee /etc/docker/daemon.json
-          sudo systemctl restart docker
-      - name: checkout packaging
-        uses: actions/checkout@v2
-        with:
-          path: packaging
-      - name: checkout wkhtmltopdf with submodules
-        uses: actions/checkout@v2
-        with:
-          repository: wkhtmltopdf/wkhtmltopdf
-          path: wkhtmltopdf
-          submodules: true
-          ref: ${{ github.event.inputs.wkhtmltopdf_ref }}
-      - name: build
-        run: cd packaging && python3 ./build package-docker --clean --iteration ${{ github.event.inputs.packaging_iteration }} ${{ matrix.package_target }} ../wkhtmltopdf
-      - uses: softprops/action-gh-release@v0.1.14
-        with:
-          name: ${{ github.event.inputs.packaging_release }}
-          tag_name: ${{ github.event.inputs.packaging_release }}-${{ github.event.inputs.packaging_iteration }}
-          target_commitish: ${{ github.sha }}
-          files: "packaging/targets/wkhtmltox*.*"
-          fail_on_unmatched_files: false
-          draft: true
-          body: All packages were built and uploaded automatically as a part of [this run](${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}), using this [wkhtmltopdf branch/tag](https://github.com/wkhtmltopdf/wkhtmltopdf/tree/${{ github.event.inputs.wkhtmltopdf_ref }}).
-
   macos:
     runs-on: macos-10.15
     steps:
