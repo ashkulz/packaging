@@ -32,6 +32,8 @@ def prepare_build(config, target, build_dir, src_dir):
     stdout = subprocess.check_output('("%s" %s>nul)&&"%s" -c "import json, os, sys; sys.stdout.write(json.dumps(dict(os.environ)))"' % (
         os.path.join(msvc_dir, 'vcvarsall.bat'), msvc_arg, sys.executable), shell=True)
 
+    print(stdout.decode('utf-8'))
+
     os.environ.update(json.loads(stdout if isinstance(stdout, str) else stdout.decode('utf-8')))
 
     return '-D LIBJPEG_STATIC OPENSSL_LIBS="-llibssl -llibcrypto -lUser32 -lAdvapi32 -lGdi32 -lCrypt32"', ''
